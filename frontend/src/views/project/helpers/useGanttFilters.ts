@@ -8,6 +8,7 @@ import {parseDateProp} from '@/helpers/time/parseDateProp'
 import {parseBooleanProp} from '@/helpers/time/parseBooleanProp'
 import {useRouteFilters, type UseRouteFiltersReturn} from '@/composables/useRouteFilters'
 import {useGanttTaskList, type UseGanttTaskListReturn} from './useGanttTaskList'
+import type {GanttZoomLevel} from '@/helpers/gantt/ganttZoom'
 
 import type {IProject} from '@/modelTypes/IProject'
 import type {TaskFilterParams} from '@/services/taskCollection'
@@ -23,9 +24,16 @@ export interface GanttFilters {
 	dateFrom: DateISO
 	dateTo: DateISO
 	showTasksWithoutDates: boolean
+	zoom: GanttZoomLevel
 }
 
 const DEFAULT_SHOW_TASKS_WITHOUT_DATES = false
+const DEFAULT_ZOOM: GanttZoomLevel = 'day'
+const GANTT_ZOOM_LEVELS: GanttZoomLevel[] = ['day', 'week', 'biweek', 'month']
+
+function parseZoomProp(zoomProp: string | undefined): GanttZoomLevel {
+	return GANTT_ZOOM_LEVELS.includes(zoomProp as GanttZoomLevel) ? zoomProp as GanttZoomLevel : DEFAULT_ZOOM
+}
 
 const DEFAULT_DATEFROM_DAY_OFFSET = -15
 const DEFAULT_DATETO_DAY_OFFSET = +55
@@ -49,6 +57,7 @@ function ganttRouteToFilters(route: Partial<RouteLocationNormalized>): GanttFilt
 		dateFrom: parseDateProp(ganttRoute.query?.dateFrom as DateKebab) || getDefaultDateFrom(),
 		dateTo: parseDateProp(ganttRoute.query?.dateTo as DateKebab) || getDefaultDateTo(),
 		showTasksWithoutDates: parseBooleanProp(ganttRoute.query?.showTasksWithoutDates as string) || DEFAULT_SHOW_TASKS_WITHOUT_DATES,
+		zoom: parseZoomProp(ganttRoute.query?.zoom as string),
 	}
 }
 
@@ -74,6 +83,10 @@ function ganttFiltersToRoute(filters: GanttFilters): RouteLocationRaw {
 
 	if (filters.showTasksWithoutDates) {
 		query.showTasksWithoutDates = String(filters.showTasksWithoutDates)
+	}
+
+	if (filters.zoom !== DEFAULT_ZOOM) {
+		query.zoom = filters.zoom
 	}
 
 	return {

@@ -27,18 +27,21 @@
 import {computed, useAttrs} from 'vue'
 import {useI18n} from 'vue-i18n'
 import {useGanttBar, type GanttBarModel} from '@/composables/useGanttBar'
+import type {GanttZoomLevel} from '@/helpers/gantt/ganttZoom'
 
 const props = withDefaults(
 	defineProps<{
 		model: GanttBarModel
 		timelineStart: Date
 		timelineEnd: Date
+		zoom?: GanttZoomLevel
 		onDoubleClick?: (model: GanttBarModel) => void
 		onUpdate?: (id: string, newStart: Date, newEnd: Date) => void
 		as?: string
 	}>(),
 	{
 		as: 'g',
+		zoom: 'day',
 		onDoubleClick: undefined,
 		onUpdate: undefined,
 	},
@@ -58,6 +61,7 @@ const {
 	model: props.model,
 	timelineStart: props.timelineStart,
 	timelineEnd: props.timelineEnd,
+	zoom: props.zoom,
 	onUpdate: props.onUpdate,
 })
 const ariaMin = computed(() => props.timelineStart.valueOf())
