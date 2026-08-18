@@ -5,87 +5,107 @@
 	/>
 	<div
 		v-else
-		ref="ganttContainer"
-		class="gantt-container"
-		role="application"
-		:aria-label="$t('project.gantt.chartLabel')"
+		class="gantt-outer-wrapper"
 	>
-		<div class="gantt-chart-wrapper">
-			<GanttTimelineHeader
-				:timeline-data="renderTimelineData"
-				:day-width-pixels="dayWidthPixels"
-				:zoom="filters.zoom"
-				:zoom-ranges="zoomRanges"
-			/>
+		<button
+			type="button"
+			class="gantt-extend-button gantt-extend-button-left"
+			:aria-label="$t('project.gantt.extendEarlier')"
+			@click="extendRange('left')"
+		>
+			<Icon icon="angle-left" />
+		</button>
+		<button
+			type="button"
+			class="gantt-extend-button gantt-extend-button-right"
+			:aria-label="$t('project.gantt.extendLater')"
+			@click="extendRange('right')"
+		>
+			<Icon icon="angle-right" />
+		</button>
+		<div
+			ref="ganttContainer"
+			class="gantt-container"
+			role="application"
+			:aria-label="$t('project.gantt.chartLabel')"
+		>
+			<div class="gantt-chart-wrapper">
+				<GanttTimelineHeader
+					:timeline-data="renderTimelineData"
+					:day-width-pixels="dayWidthPixels"
+					:zoom="filters.zoom"
+					:zoom-ranges="zoomRanges"
+				/>
 
-			<GanttVerticalGridLines
-				:line-positions="gridLinePositions"
-				:total-width="totalWidth"
-				:height="ganttRows.length * 40"
-			/>
+				<GanttVerticalGridLines
+					:line-positions="gridLinePositions"
+					:total-width="totalWidth"
+					:height="ganttRows.length * 40"
+				/>
 
-			<GanttChartBody
-				ref="ganttChartBodyRef"
-				:rows="ganttRows"
-				:cells-by-row="cellsByRow"
-				@update:focused="handleFocusChange"
-				@enterPressed="handleEnterPressed"
-			>
-				<template #default="{ focusedRow, focusedCell }">
-					<div class="gantt-rows-container">
-						<!-- Group background bands for parent-child visual grouping -->
-						<div
-							v-for="(band, bandIndex) in parentGroupBands"
-							:key="`band-${bandIndex}`"
-							class="gantt-group-band"
-							:style="{
-								top: `${band.startIndex * ROW_HEIGHT}px`,
-								height: `${(band.endIndex - band.startIndex + 1) * ROW_HEIGHT}px`,
-								left: `${band.left}px`,
-								width: `${band.width}px`,
-							}"
-						/>
-						<div class="gantt-rows">
-							<GanttRow
-								v-for="(rowId, index) in ganttRows"
-								:id="rowId"
-								:key="rowId"
-								:index="index"
-							>
-								<div class="gantt-row-content">
-									<GanttRowBars
-										:bars="ganttBars[index] ?? []"
-										:total-width="totalWidth"
-										:date-from-date="dateFromDate"
-										:date-to-date="dateToDate"
-										:day-width-pixels="dayWidthPixels"
-										:zoom="filters.zoom"
-										:is-dragging="isDragging"
-										:is-resizing="isResizing"
-										:drag-state="dragState"
-										:focused-row="focusedRow ?? null"
-										:focused-cell="focusedCell"
-										:row-id="rowId"
-										:is-parent="ganttBars[index]?.[0]?.meta?.isParent ?? false"
-										:is-collapsed="collapsedTaskIds.has(Number(ganttBars[index]?.[0]?.id))"
-										@barPointerDown="handleBarPointerDown"
-										@startResize="startResize"
-										@updateTask="updateGanttTask"
-										@toggleCollapse="toggleCollapse(Number(ganttBars[index]?.[0]?.id))"
-									/>
-								</div>
-							</GanttRow>
+				<GanttChartBody
+					ref="ganttChartBodyRef"
+					:rows="ganttRows"
+					:cells-by-row="cellsByRow"
+					@update:focused="handleFocusChange"
+					@enterPressed="handleEnterPressed"
+				>
+					<template #default="{ focusedRow, focusedCell }">
+						<div class="gantt-rows-container">
+							<!-- Group background bands for parent-child visual grouping -->
+							<div
+								v-for="(band, bandIndex) in parentGroupBands"
+								:key="`band-${bandIndex}`"
+								class="gantt-group-band"
+								:style="{
+									top: `${band.startIndex * ROW_HEIGHT}px`,
+									height: `${(band.endIndex - band.startIndex + 1) * ROW_HEIGHT}px`,
+									left: `${band.left}px`,
+									width: `${band.width}px`,
+								}"
+							/>
+							<div class="gantt-rows">
+								<GanttRow
+									v-for="(rowId, index) in ganttRows"
+									:id="rowId"
+									:key="rowId"
+									:index="index"
+								>
+									<div class="gantt-row-content">
+										<GanttRowBars
+											:bars="ganttBars[index] ?? []"
+											:total-width="totalWidth"
+											:date-from-date="dateFromDate"
+											:date-to-date="dateToDate"
+											:day-width-pixels="dayWidthPixels"
+											:zoom="filters.zoom"
+											:is-dragging="isDragging"
+											:is-resizing="isResizing"
+											:drag-state="dragState"
+											:focused-row="focusedRow ?? null"
+											:focused-cell="focusedCell"
+											:row-id="rowId"
+											:is-parent="ganttBars[index]?.[0]?.meta?.isParent ?? false"
+											:is-collapsed="collapsedTaskIds.has(Number(ganttBars[index]?.[0]?.id))"
+											@barPointerDown="handleBarPointerDown"
+											@startResize="startResize"
+											@updateTask="updateGanttTask"
+											@toggleCollapse="toggleCollapse(Number(ganttBars[index]?.[0]?.id))"
+										/>
+									</div>
+								</GanttRow>
+							</div>
+							<GanttRelationArrows
+								v-if="relationArrows.length > 0"
+								:arrows="relationArrows"
+								:width="totalWidth"
+								:height="totalHeight"
+								:row-height="ROW_HEIGHT"
+							/>
 						</div>
-						<GanttRelationArrows
-							v-if="relationArrows.length > 0"
-							:arrows="relationArrows"
-							:width="totalWidth"
-							:height="totalHeight"
-							:row-height="ROW_HEIGHT"
-						/>
-					</div>
-				</template>
-			</GanttChartBody>
+					</template>
+				</GanttChartBody>
+			</div>
 		</div>
 	</div>
 </template>
@@ -112,6 +132,7 @@ import GanttVerticalGridLines from '@/components/gantt/GanttVerticalGridLines.vu
 import GanttTimelineHeader from '@/components/gantt/GanttTimelineHeader.vue'
 import GanttRelationArrows from '@/components/gantt/GanttRelationArrows.vue'
 import Loading from '@/components/misc/Loading.vue'
+import Icon from '@/components/misc/Icon'
 
 import {MILLISECONDS_A_DAY} from '@/constants/date'
 import {roundToNaturalDayBoundary} from '@/helpers/time/roundToNaturalDayBoundary'
@@ -127,6 +148,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'update:task', task: ITaskPartialWithId): void
+  (e: 'extendRange', direction: 'left' | 'right'): void
 }>()
 
 const dayWidthPixels = ref(0)
@@ -135,7 +157,7 @@ let resizeObserver: ResizeObserver
 const {tasks, filters} = toRefs(props)
 
 const dayjsLanguageLoading = useDayjsLanguageSync(dayjs)
-const ganttContainer = ref(null)
+const ganttContainer = ref<HTMLDivElement | null>(null)
 const ganttChartBodyRef = ref<InstanceType<typeof GanttChartBody> | null>(null)
 const router = useRouter()
 
@@ -354,6 +376,34 @@ function updateDayWidthPixels() {
 	)
 }
 
+// How close to an edge (in pixels) a scroll needs to get before it auto-extends the range.
+const SCROLL_EXTEND_THRESHOLD_PIXELS = 200
+// Cooldown so a single scroll gesture doesn't trigger multiple overlapping extends while
+// the range/DOM are still settling from the previous one.
+const SCROLL_EXTEND_COOLDOWN_MS = 600
+let isAutoExtending = false
+
+function handleGanttScroll() {
+	const el = ganttContainer.value
+	if (!el || isAutoExtending) return
+	// Nothing to extend toward if the range already fits without scrolling.
+	if (el.scrollWidth <= el.clientWidth + 1) return
+
+	if (el.scrollLeft <= SCROLL_EXTEND_THRESHOLD_PIXELS) {
+		isAutoExtending = true
+		extendRange('left')
+		setTimeout(() => { isAutoExtending = false }, SCROLL_EXTEND_COOLDOWN_MS)
+	} else if (el.scrollLeft + el.clientWidth >= el.scrollWidth - SCROLL_EXTEND_THRESHOLD_PIXELS) {
+		isAutoExtending = true
+		extendRange('right')
+		setTimeout(() => { isAutoExtending = false }, SCROLL_EXTEND_COOLDOWN_MS)
+	}
+}
+
+function extendRange(direction: 'left' | 'right') {
+	emit('extendRange', direction)
+}
+
 onMounted(async () => {
 	await nextTick()
 	updateDayWidthPixels()
@@ -361,6 +411,7 @@ onMounted(async () => {
 	if (ganttContainer.value) {
 		resizeObserver = new ResizeObserver(updateDayWidthPixels)
 		resizeObserver.observe(ganttContainer.value)
+		ganttContainer.value.addEventListener('scroll', handleGanttScroll, {passive: true})
 	}
 
 	window.addEventListener('resize', updateDayWidthPixels)
@@ -369,13 +420,26 @@ onMounted(async () => {
 onBeforeUnmount(() => {
 	resizeObserver?.disconnect()
 	window.removeEventListener('resize', updateDayWidthPixels)
+	ganttContainer.value?.removeEventListener('scroll', handleGanttScroll)
 })
 
 watch(
 	[dateFromDate, dateToDate, () => filters.value.zoom],
-	async () => {
+	async ([newFrom], [oldFrom]) => {
+		// Growing the range on the left shifts the pixel origin (dateFromDate), which would
+		// otherwise visibly jump the scroll position. Anchor the viewport on the previous
+		// left edge so the content the user was looking at stays put.
+		const shouldAnchorLeft = newFrom.getTime() < oldFrom.getTime()
+		const anchorDate = oldFrom
+		const oldScrollLeft = ganttContainer.value?.scrollLeft ?? 0
+
 		await nextTick()
 		updateDayWidthPixels()
+		await nextTick()
+
+		if (shouldAnchorLeft && ganttContainer.value) {
+			ganttContainer.value.scrollLeft = oldScrollLeft + computeBarX(anchorDate)
+		}
 	},
 	{flush: 'post'},
 )
@@ -835,9 +899,45 @@ onUnmounted(() => {
 </script>
 
 <style scoped lang="scss">
+.gantt-outer-wrapper {
+	position: relative;
+}
+
 .gantt-container {
 	overflow-x: auto;
 	min-inline-size: 100%;
+}
+
+.gantt-extend-button {
+	position: absolute;
+	inset-block-start: 50%;
+	transform: translateY(-50%);
+	z-index: 20;
+	inline-size: 2rem;
+	block-size: 2rem;
+	border-radius: 50%;
+	border: 1px solid var(--grey-200);
+	background: var(--white);
+	color: var(--grey-600);
+	box-shadow: $shadow;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition: $transition;
+
+	&:hover {
+		color: var(--primary);
+		border-color: var(--primary);
+	}
+
+	&.gantt-extend-button-left {
+		inset-inline-start: -1rem;
+	}
+
+	&.gantt-extend-button-right {
+		inset-inline-end: -1rem;
+	}
 }
 
 .gantt-chart-wrapper {

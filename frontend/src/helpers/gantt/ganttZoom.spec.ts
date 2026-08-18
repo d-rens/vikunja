@@ -1,7 +1,7 @@
 import {describe, it, expect} from 'vitest'
 import dayjs from 'dayjs'
 
-import {getZoomUnitRanges, formatZoomUnitLabel, snapDragDays, getMinDayWidthPixels, stepZoomUnit} from './ganttZoom'
+import {getZoomUnitRanges, formatZoomUnitLabel, snapDragDays, getMinDayWidthPixels, stepZoomUnit, getExtendChunkDays} from './ganttZoom'
 
 describe('getZoomUnitRanges', () => {
 	it('returns one range per day for day zoom', () => {
@@ -115,5 +115,13 @@ describe('getMinDayWidthPixels', () => {
 		expect(getMinDayWidthPixels('day')).toBeGreaterThan(getMinDayWidthPixels('week'))
 		expect(getMinDayWidthPixels('week')).toBeGreaterThan(getMinDayWidthPixels('biweek'))
 		expect(getMinDayWidthPixels('biweek')).toBeGreaterThan(getMinDayWidthPixels('month'))
+	})
+})
+
+describe('getExtendChunkDays', () => {
+	it('increases as zoom widens', () => {
+		expect(getExtendChunkDays('day')).toBeLessThan(getExtendChunkDays('week'))
+		expect(getExtendChunkDays('week')).toBeLessThan(getExtendChunkDays('biweek'))
+		expect(getExtendChunkDays('biweek')).toBeLessThan(getExtendChunkDays('month'))
 	})
 })

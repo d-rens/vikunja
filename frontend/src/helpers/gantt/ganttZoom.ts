@@ -19,6 +19,22 @@ export function getMinDayWidthPixels(zoom: GanttZoomLevel): number {
 	return MIN_DAY_WIDTH_PIXELS[zoom]
 }
 
+const EXTEND_CHUNK_DAYS: Record<GanttZoomLevel, number> = {
+	day: 14,
+	week: 28,
+	biweek: 56,
+	month: 90,
+}
+
+/**
+ * How many days to grow the selected date range by per "extend" action (edge button or
+ * scroll-to-edge), scaled to the zoom level so the jump feels proportional to how much
+ * time is already visible per screen at that zoom.
+ */
+export function getExtendChunkDays(zoom: GanttZoomLevel): number {
+	return EXTEND_CHUNK_DAYS[zoom]
+}
+
 function naturalUnitStart(date: dayjs.Dayjs, zoom: GanttZoomLevel): dayjs.Dayjs {
 	if (zoom === 'week') {
 		return date.startOf('week')
