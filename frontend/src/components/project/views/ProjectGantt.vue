@@ -94,6 +94,7 @@
 						:default-task-start-date="defaultTaskStartDate"
 						:default-task-end-date="defaultTaskEndDate"
 						@update:task="updateTask"
+						@extendRange="applyExtendRange"
 					/>
 					<TaskForm
 						v-if="canWrite"
@@ -123,6 +124,7 @@ import FormField from '@/components/input/FormField.vue'
 
 import GanttChart from '@/components/gantt/GanttChart.vue'
 import {useGanttFilters} from '../../../views/project/helpers/useGanttFilters'
+import {getExtendChunkDays} from '@/helpers/gantt/ganttZoom'
 import {PERMISSIONS} from '@/constants/permissions'
 
 import type {DateISO} from '@/types/DateISO'
@@ -237,6 +239,15 @@ const activePresetKey = computed<DateRangePresetKey | null>(() => {
 	})
 	return match?.key ?? null
 })
+
+function applyExtendRange(direction: 'left' | 'right') {
+	const chunkDays = getExtendChunkDays(filters.value.zoom)
+	if (direction === 'left') {
+		filters.value.dateFrom = dayjs(filters.value.dateFrom).subtract(chunkDays, 'day').toISOString()
+	} else {
+		filters.value.dateTo = dayjs(filters.value.dateTo).add(chunkDays, 'day').toISOString()
+	}
+}
 
 const {t} = useI18n({useScope: 'global'})
 const flatPickerConfig = computed(() => ({

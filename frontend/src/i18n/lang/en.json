@@ -486,6 +486,8 @@
       "rangeThisQuarter": "This quarter",
       "rangeNext3Months": "Next 3 months",
       "rangeThisYear": "This year",
+      "extendEarlier": "Show earlier tasks",
+      "extendLater": "Show later tasks",
       "chartLabel": "Project Gantt Chart",
       "taskBarsForRow": "Task bars for row {rowId}",
       "taskBarLabel": "Task: {task}. From {startDate} to {endDate}. {dateType}. Click to edit, drag to move.",
