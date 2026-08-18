@@ -1,4 +1,5 @@
 import { ref } from 'vue'
+import {stepZoomUnit, type GanttZoomLevel} from '@/helpers/gantt/ganttZoom'
 
 export type GanttBarDateType = 'both' | 'startOnly' | 'endOnly'
 
@@ -22,6 +23,7 @@ export interface UseGanttBarOptions {
 	model: GanttBarModel
 	timelineStart: Date
 	timelineEnd: Date
+	zoom?: GanttZoomLevel
 	onUpdate?: (id: string, newStart: Date, newEnd: Date) => void
 }
 
@@ -39,15 +41,16 @@ export function useGanttBar(options: UseGanttBarOptions) {
 	}
 
 	function changeSize(direction: 'left' | 'right', modifier: -1 | 1) {
-		const newStart = new Date(options.model.start)
-		const newEnd = new Date(options.model.end)
+		const zoom = options.zoom ?? 'day'
+		let newStart = new Date(options.model.start)
+		let newEnd = new Date(options.model.end)
 
 		if (direction === 'left') {
 			// Shift+Left: Expand task to the left (move start date earlier)
-			newStart.setDate(newStart.getDate() - 1 * modifier)
+			newStart = stepZoomUnit(newStart, modifier === 1 ? -1 : 1, zoom)
 		} else {
-			// Shift+Right: Expand task to the right (move end date later)  
-			newEnd.setDate(newEnd.getDate() + 1 * modifier)
+			// Shift+Right: Expand task to the right (move end date later)
+			newEnd = stepZoomUnit(newEnd, modifier === 1 ? 1 : -1, zoom)
 		}
 
 		// Validate that start is before end (maintain minimum 1 day duration)
@@ -88,11 +91,10 @@ export function useGanttBar(options: UseGanttBarOptions) {
 		else if (e.code === 'ArrowLeft' || e.code === 'ArrowRight') {
 			e.preventDefault()
 
+			const zoom = options.zoom ?? 'day'
 			const dir = e.code === 'ArrowRight' ? 1 : -1
-			const newStart = new Date(options.model.start)
-			newStart.setDate(newStart.getDate() + dir)
-			const newEnd = new Date(options.model.end)
-			newEnd.setDate(newEnd.getDate() + dir)
+			const newStart = stepZoomUnit(options.model.start, dir, zoom)
+			const newEnd = stepZoomUnit(options.model.end, dir, zoom)
 
 			options.model.start = newStart
 			options.model.end = newEnd

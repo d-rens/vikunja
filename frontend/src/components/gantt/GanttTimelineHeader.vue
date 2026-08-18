@@ -4,8 +4,9 @@
 		role="columnheader"
 		:aria-label="$t('project.gantt.timelineHeader')"
 	>
-		<!-- Upper timeunit for months -->
+		<!-- Upper timeunit for months (redundant with the lower row at month zoom) -->
 		<div
+			v-if="zoom !== 'month'"
 			class="gantt-timeline-months"
 			role="row"
 			:aria-label="$t('project.gantt.monthsRow')"
@@ -21,9 +22,10 @@
 				{{ monthGroup.label }}
 			</div>
 		</div>
-        
+
 		<!-- Lower timeunit for days -->
 		<div
+			v-if="zoom === 'day'"
 			class="gantt-timeline-days"
 			role="row"
 			:aria-label="$t('project.gantt.daysRow')"
@@ -34,7 +36,7 @@
 				class="timeunit"
 				:style="{ width: `${dayWidthPixels}px` }"
 				role="columnheader"
-				:aria-label="dateIsToday(date) 
+				:aria-label="dateIsToday(date)
 					? $t('project.gantt.dayLabelToday', {
 						date: date.toLocaleDateString(),
 						weekday: weekDayFromDate(date)
@@ -55,6 +57,32 @@
 				</div>
 			</div>
 		</div>
+
+		<!-- Lower timeunit for week/biweek/month zoom -->
+		<div
+			v-else
+			class="gantt-timeline-days gantt-timeline-periods"
+			role="row"
+			:aria-label="$t('project.gantt.periodsRow')"
+		>
+			<div
+				v-for="range in zoomRanges"
+				:key="range.start.toISOString()"
+				class="timeunit"
+				:style="{ width: `${range.days * dayWidthPixels}px` }"
+				role="columnheader"
+				:aria-label="rangeIsToday(range)
+					? $t('project.gantt.periodLabelToday', {period: formatZoomUnitLabel(range, zoom)})
+					: $t('project.gantt.periodLabel', {period: formatZoomUnitLabel(range, zoom)})"
+			>
+				<div
+					class="timeunit-wrapper"
+					:class="{'today': rangeIsToday(range)}"
+				>
+					<span>{{ formatZoomUnitLabel(range, zoom) }}</span>
+				</div>
+			</div>
+		</div>
 	</div>
 </template>
 
@@ -64,9 +92,13 @@ import {useGlobalNow} from '@/composables/useGlobalNow'
 import {useWeekDayFromDate} from '@/helpers/time/formatDate'
 import dayjs from 'dayjs'
 
+import {formatZoomUnitLabel, type GanttZoomLevel, type GanttZoomRange} from '@/helpers/gantt/ganttZoom'
+
 const props = defineProps<{
     timelineData: Date[]
     dayWidthPixels: number
+    zoom: GanttZoomLevel
+    zoomRanges: GanttZoomRange[]
 }>()
 
 const weekDayFromDate = useWeekDayFromDate()
@@ -75,6 +107,11 @@ const { now: today } = useGlobalNow()
 const dateIsToday = computed(() => {
 	const todayStr = today.value.toDateString()
 	return (date: Date) => date.toDateString() === todayStr
+})
+
+const rangeIsToday = computed(() => {
+	const now = today.value.getTime()
+	return (range: GanttZoomRange) => now >= range.start.getTime() && now < range.end.getTime()
 })
 
 const monthGroups = computed(() => {
@@ -152,6 +189,16 @@ const monthGroups = computed(() => {
 				font-size: 0.8rem;
 			}
 		}
+	}
+}
+
+.gantt-timeline-periods {
+	.timeunit-wrapper span {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		max-inline-size: 100%;
+		padding-inline: 0.25rem;
 	}
 }
 </style>

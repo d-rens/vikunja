@@ -14,6 +14,7 @@
 			:model="bar"
 			:timeline-start="dateFromDate"
 			:timeline-end="dateToDate"
+			:zoom="zoom"
 			:on-update="(id, start, end) => emit('updateTask', id, start, end)"
 		>
 			<!-- Gradient definitions for partial-date bars -->
@@ -214,6 +215,7 @@ import type {GanttBarModel} from '@/composables/useGanttBar'
 import {getTextColor, LIGHT} from '@/helpers/color/getTextColor'
 import {MILLISECONDS_A_DAY} from '@/constants/date'
 import {roundToNaturalDayBoundary} from '@/helpers/time/roundToNaturalDayBoundary'
+import type {GanttZoomLevel} from '@/helpers/gantt/ganttZoom'
 
 import GanttBarPrimitive from './primitives/GanttBarPrimitive.vue'
 
@@ -223,6 +225,7 @@ const props = defineProps<{
 	dateFromDate: Date
 	dateToDate: Date
 	dayWidthPixels: number
+	zoom: GanttZoomLevel
 	isDragging: boolean
 	isResizing: boolean
 	dragState: {

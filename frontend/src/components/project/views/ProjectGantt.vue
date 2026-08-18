@@ -18,6 +18,46 @@
 							:placeholder="$t('misc.dateRange')"
 						/>
 					</FormField>
+					<FormField
+						id="gantt-zoom"
+						:label="$t('project.gantt.zoomLevel')"
+					>
+						<div class="select">
+							<select
+								id="gantt-zoom"
+								v-model="filters.zoom"
+							>
+								<option value="day">
+									{{ $t('project.gantt.day') }}
+								</option>
+								<option value="week">
+									{{ $t('project.gantt.week') }}
+								</option>
+								<option value="biweek">
+									{{ $t('project.gantt.biweek') }}
+								</option>
+								<option value="month">
+									{{ $t('project.gantt.month') }}
+								</option>
+							</select>
+						</div>
+					</FormField>
+					<FormField
+						:label="$t('project.gantt.quickRange')"
+						class="quick-range-field"
+					>
+						<div class="buttons has-addons quick-range-buttons">
+							<XButton
+								v-for="preset in DATE_RANGE_PRESETS"
+								:key="preset.key"
+								variant="secondary"
+								:class="{'is-active': activePresetKey === preset.key}"
+								@click="applyDateRangePreset(preset.key)"
+							>
+								{{ $t(preset.labelKey) }}
+							</XButton>
+						</div>
+					</FormField>
 					<div
 						v-if="!hasDefaultFilters"
 						class="field"
@@ -70,6 +110,7 @@ import {computed, ref, toRefs} from 'vue'
 import type Flatpickr from 'flatpickr'
 import {useI18n} from 'vue-i18n'
 import type {RouteLocationNormalized} from 'vue-router'
+import dayjs from 'dayjs'
 
 import {useBaseStore} from '@/stores/base'
 import {useFlatpickrLanguage} from '@/helpers/useFlatpickrLanguage'
@@ -146,6 +187,57 @@ const flatPickerDateRange = computed<Date[]>({
 	},
 })
 
+type DateRangePresetKey = 'month' | 'quarter' | 'next3Months' | 'year'
+
+const DATE_RANGE_PRESETS: { key: DateRangePresetKey, labelKey: string }[] = [
+	{key: 'month', labelKey: 'project.gantt.rangeThisMonth'},
+	{key: 'quarter', labelKey: 'project.gantt.rangeThisQuarter'},
+	{key: 'next3Months', labelKey: 'project.gantt.rangeNext3Months'},
+	{key: 'year', labelKey: 'project.gantt.rangeThisYear'},
+]
+
+function getPresetRange(key: DateRangePresetKey): { dateFrom: DateISO, dateTo: DateISO } {
+	const now = dayjs()
+
+	switch (key) {
+		case 'month':
+			return {
+				dateFrom: now.startOf('month').toISOString(),
+				dateTo: now.endOf('month').toISOString(),
+			}
+		case 'quarter': {
+			const quarterStartMonth = Math.floor(now.month() / 3) * 3
+			const start = now.month(quarterStartMonth).startOf('month')
+			return {
+				dateFrom: start.toISOString(),
+				dateTo: start.add(3, 'month').subtract(1, 'day').endOf('day').toISOString(),
+			}
+		}
+		case 'next3Months':
+			return {
+				dateFrom: now.startOf('day').toISOString(),
+				dateTo: now.add(3, 'month').endOf('day').toISOString(),
+			}
+		case 'year':
+			return {
+				dateFrom: now.startOf('year').toISOString(),
+				dateTo: now.endOf('year').toISOString(),
+			}
+	}
+}
+
+function applyDateRangePreset(key: DateRangePresetKey) {
+	Object.assign(filters.value, getPresetRange(key))
+}
+
+const activePresetKey = computed<DateRangePresetKey | null>(() => {
+	const match = DATE_RANGE_PRESETS.find(({key}) => {
+		const range = getPresetRange(key)
+		return range.dateFrom === filters.value.dateFrom && range.dateTo === filters.value.dateTo
+	})
+	return match?.key ?? null
+})
+
 const {t} = useI18n({useScope: 'global'})
 const flatPickerConfig = computed(() => ({
 	altFormat: t('date.altFormatShort'),
@@ -166,12 +258,33 @@ const flatPickerConfig = computed(() => ({
 
 .gantt-options {
 	display: flex;
+	flex-wrap: wrap;
 	justify-content: space-between;
 	align-items: center;
+	row-gap: .5rem;
 	margin-block-end: 1rem;
 
 	@media screen and (max-width: $tablet) {
 		flex-direction: column;
+	}
+}
+
+.field.quick-range-field {
+	inline-size: auto;
+	max-inline-size: none;
+}
+
+.quick-range-buttons {
+	margin-block-end: 0;
+
+	:deep(.button) {
+		font-size: .8rem;
+	}
+
+	:deep(.button.is-active) {
+		background-color: var(--primary);
+		border-color: var(--primary);
+		color: var(--white);
 	}
 }
 

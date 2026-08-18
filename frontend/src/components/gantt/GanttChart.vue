@@ -12,15 +12,16 @@
 	>
 		<div class="gantt-chart-wrapper">
 			<GanttTimelineHeader
-				:timeline-data="timelineData"
+				:timeline-data="renderTimelineData"
 				:day-width-pixels="dayWidthPixels"
+				:zoom="filters.zoom"
+				:zoom-ranges="zoomRanges"
 			/>
 
 			<GanttVerticalGridLines
-				:timeline-data="timelineData"
+				:line-positions="gridLinePositions"
 				:total-width="totalWidth"
 				:height="ganttRows.length * 40"
-				:day-width-pixels="dayWidthPixels"
 			/>
 
 			<GanttChartBody
@@ -58,6 +59,7 @@
 										:date-from-date="dateFromDate"
 										:date-to-date="dateToDate"
 										:day-width-pixels="dayWidthPixels"
+										:zoom="filters.zoom"
 										:is-dragging="isDragging"
 										:is-resizing="isResizing"
 										:drag-state="dragState"
@@ -113,6 +115,7 @@ import Loading from '@/components/misc/Loading.vue'
 
 import {MILLISECONDS_A_DAY} from '@/constants/date'
 import {roundToNaturalDayBoundary} from '@/helpers/time/roundToNaturalDayBoundary'
+import {getZoomUnitRanges, getMinDayWidthPixels, snapDragDays} from '@/helpers/gantt/ganttZoom'
 
 const props = defineProps<{
 	isLoading: boolean,
@@ -126,7 +129,6 @@ const emit = defineEmits<{
   (e: 'update:task', task: ITaskPartialWithId): void
 }>()
 
-const DAY_WIDTH_PIXELS_MIN = 30
 const dayWidthPixels = ref(0)
 let resizeObserver: ResizeObserver
 
@@ -158,26 +160,56 @@ let dragStopHandler: (() => void) | null = null
 const dateFromDate = computed(() => dayjs(filters.value.dateFrom).startOf('day').toDate())
 const dateToDate = computed(() => dayjs(filters.value.dateTo).endOf('day').toDate())
 
-const totalWidth = computed(() => {
-	const dateDiff = Math.ceil((dateToDate.value.valueOf() - dateFromDate.value.valueOf()) / MILLISECONDS_A_DAY)
-	return dateDiff * dayWidthPixels.value
-})
-
 const timelineData = computed(() => {
 	const dates: Date[] = []
 	const currentDate = new Date(dateFromDate.value)
-	
+
 	while (currentDate <= dateToDate.value) {
 		dates.push(new Date(currentDate))
 		currentDate.setDate(currentDate.getDate() + 1)
 	}
-	
+
 	return dates
 })
 
 const ganttBars = ref<GanttBarModel[][]>([])
 const ganttRows = ref<string[]>([])
 const cellsByRow = ref<Record<string, string[]>>({})
+
+// Extend rendering past the selected date range when a bar overflows it (e.g. a task
+// ending after dateTo), so the header/grid lines/canvas all grow together instead of a
+// bar dangling past the last labeled column with no way to scroll to it. The selected
+// range itself still drives the task query and the day-width fit calculation below —
+// only the rendered timeline grows.
+const renderDateTo = computed(() => {
+	let maxEnd = dateToDate.value
+	for (const bar of ganttBars.value.flat()) {
+		if (bar.end > maxEnd) {
+			maxEnd = bar.end
+		}
+	}
+	return maxEnd
+})
+
+const renderTimelineData = computed(() => {
+	const dates: Date[] = []
+	const currentDate = new Date(dateFromDate.value)
+
+	while (currentDate <= renderDateTo.value) {
+		dates.push(new Date(currentDate))
+		currentDate.setDate(currentDate.getDate() + 1)
+	}
+
+	return dates
+})
+
+const totalWidth = computed(() => {
+	const dateDiff = Math.ceil((renderDateTo.value.valueOf() - dateFromDate.value.valueOf()) / MILLISECONDS_A_DAY)
+	return dateDiff * dayWidthPixels.value
+})
+
+const zoomRanges = computed(() => getZoomUnitRanges(dateFromDate.value, renderDateTo.value, filters.value.zoom))
+const gridLinePositions = computed(() => zoomRanges.value.map(range => computeBarX(range.start)))
 
 // Hierarchy state
 const collapsedTaskIds = ref(new Set<number>())
@@ -318,7 +350,7 @@ function updateDayWidthPixels() {
 
 	dayWidthPixels.value = Math.max(
 		maxWidth / dayCount,
-		DAY_WIDTH_PIXELS_MIN,
+		getMinDayWidthPixels(filters.value.zoom),
 	)
 }
 
@@ -340,7 +372,7 @@ onBeforeUnmount(() => {
 })
 
 watch(
-	[dateFromDate, dateToDate],
+	[dateFromDate, dateToDate, () => filters.value.zoom],
 	async () => {
 		await nextTick()
 		updateDayWidthPixels()
@@ -639,10 +671,11 @@ function startDrag(bar: GanttBarModel, event: PointerEvent) {
 	
 	const handleMove = (e: PointerEvent) => {
 		if (!dragState.value || !isDragging.value) return
-		
+
 		const diff = e.clientX - dragState.value.startX
-		const days = Math.round(diff / dayWidthPixels.value)
-		
+		const rawDays = diff / dayWidthPixels.value
+		const days = snapDragDays(filters.value.zoom, dragState.value.originalStart, rawDays)
+
 		if (days !== dragState.value.currentDays) {
 			dragState.value.currentDays = days
 		}
@@ -701,10 +734,12 @@ function startResize(bar: GanttBarModel, edge: 'start' | 'end', event: PointerEv
 	
 	const handleMove = (e: PointerEvent) => {
 		if (!dragState.value || !isResizing.value) return
-		
+
 		const diff = e.clientX - dragState.value.startX
-		const days = Math.round(diff / dayWidthPixels.value)
-		
+		const rawDays = diff / dayWidthPixels.value
+		const anchor = edge === 'start' ? dragState.value.originalStart : dragState.value.originalEnd
+		const days = snapDragDays(filters.value.zoom, anchor, rawDays)
+
 		if (edge === 'start') {
 			const newStart = new Date(dragState.value.originalStart)
 			newStart.setDate(newStart.getDate() + days)
